@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,7 +24,7 @@ public class Letter : MonoBehaviour
 
     public void SetColor(LetterColor color)
     {
-        switch(color)
+        switch (color)
         {
             case LetterColor.Red:
                 _background.color = Color.red;
@@ -44,7 +41,6 @@ public class Letter : MonoBehaviour
     }
 }
 
-[Serializable]
 public enum LetterColor
 {
     Red,

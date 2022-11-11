@@ -1,6 +1,6 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,20 +8,37 @@ public class GameController : MonoBehaviour
 {
     const string KeyboardLetters = "qwertyuiopasdfghjklzxcvbnm";
     const int RowCount = 5;
-    int CurrentRow = 0;
-    [SerializeField] Word[] _rows;
+
+    public event Action<bool, string> OnGameEnd
+    {
+        add { _onGameEnd += value; }
+        remove { _onGameEnd -= value; }
+    }
+    event Action<bool, string> _onGameEnd;
+
+    Dictionary<char, (LetterColor, Button)> _letterDictionary = new Dictionary<char, (LetterColor, Button)>();
     [SerializeField] TextAsset _wordsText;
+
+    [SerializeField] Word[] _rows;
+    [SerializeField] Button[] _keyboardButtons;
     [SerializeField] string[] _words;
     [SerializeField] string _word;
-    [SerializeField] Button[] _keyboardButtons;
-    Dictionary<char, (LetterColor, Button)> _letterDictionary = new Dictionary<char, (LetterColor, Button)>();
+
+    int CurrentRow = 0;
     List<char> _input = new List<char>();
-    [SerializeField] GameObject _gameObject;
-    [SerializeField] GameObject _gameOverObject;
-    [SerializeField] TextMeshProUGUI _wonText;
-    [SerializeField] TextMeshProUGUI _lostText;
-    [SerializeField] TextMeshProUGUI _wordText;
     bool _isGameOver = false;
+
+    #region Initialization
+
+    void Start()
+    {
+        if (_words.Length > 0)
+        {
+            BuildWordDatabase();
+        }
+        BuildKeyboard();
+        _word = _words[UnityEngine.Random.Range(0, _words.Length)];
+    }
 
     /// <summary>
     /// Builds the word database.
@@ -54,18 +71,9 @@ public class GameController : MonoBehaviour
         }
     }
 
-    void Start()
-    {
-        if (_words.Length > 0)
-        {
-            BuildWordDatabase();
-        }
-        BuildKeyboard();
-        _word = _words[Random.Range(0, _words.Length)];
+    #endregion
 
-        _gameOverObject.SetActive(false);
-        _gameObject.SetActive(true);
-    }
+    #region Submit Word
 
     /// <summary>
     /// Updates the current row.
@@ -86,7 +94,6 @@ public class GameController : MonoBehaviour
         var word = new string(_input.ToArray());
 
         if (word.Length < Word.WordLength) return;
-
 
         if (!ContainsWord(_words, word)) return;
 
@@ -156,13 +163,17 @@ public class GameController : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region Help Functions
+
     /// <summary>
     /// Checks if an array of words contain a specific word.
     /// </summary>
     /// <param name="words">the array of words.</param>
     /// <param name="word">the word to check for.</param>
     /// <returns>true if array contains the word.</returns>
-    bool ContainsWord(string[] words, string word)
+    static bool ContainsWord(string[] words, string word)
     {
         foreach (var w in words)
         {
@@ -180,7 +191,7 @@ public class GameController : MonoBehaviour
     /// <param name="word">the word to check.</param>
     /// <param name="letter">the letter to check for.</param>
     /// <returns>true if word contains letter.</returns>
-    bool ContainsLetter(string word, char letter)
+    static bool ContainsLetter(string word, char letter)
     {
         foreach (var w in word)
         {
@@ -192,13 +203,15 @@ public class GameController : MonoBehaviour
         return false;
     }
 
+    #endregion
+
+    #region End
+
     /// <summary>
     /// Triggers a win.
     /// </summary>
     void Win()
     {
-        _isGameOver = true;
-        Debug.Log("Win");
         foreach (Letter letter in _rows[CurrentRow].Letters)
         {
             letter.SetColor(LetterColor.Green);
@@ -211,25 +224,24 @@ public class GameController : MonoBehaviour
     /// </summary>
     void GameOver()
     {
-        _isGameOver = true;
-        Debug.Log($"Lose. Word was: {_word.ToUpper()}");
         StartCoroutine(EndSequence(false));
     }
 
+    /// <summary>
+    /// End game sequence.
+    /// </summary>
+    /// <param name="won">if player won.</param>
     IEnumerator EndSequence(bool won)
     {
+        _isGameOver = true;
         yield return new WaitForSeconds(2);
 
-        _gameOverObject.SetActive(true);
-        _gameObject.SetActive(false);
-
-        _lostText.gameObject.SetActive(!won);
-        _wonText.gameObject.SetActive(won);
-
-        _wordText.gameObject.SetActive(true);
-        _wordText.text = $"The word was:\n{_word.ToUpper()}";
-
+        _onGameEnd?.Invoke(won, _word);
     }
+
+    #endregion
+
+    #region Input
 
     /// <summary>
     /// Adds a character to the end of the input list.
@@ -253,4 +265,6 @@ public class GameController : MonoBehaviour
         _input.RemoveAt(_input.Count - 1);
         UpdateRow();
     }
+
+    #endregion
 }
