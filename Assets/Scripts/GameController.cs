@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -15,6 +16,12 @@ public class GameController : MonoBehaviour
     [SerializeField] Button[] _keyboardButtons;
     Dictionary<char, (LetterColor, Button)> _letterDictionary = new Dictionary<char, (LetterColor, Button)>();
     List<char> _input = new List<char>();
+    [SerializeField] GameObject _gameObject;
+    [SerializeField] GameObject _gameOverObject;
+    [SerializeField] TextMeshProUGUI _wonText;
+    [SerializeField] TextMeshProUGUI _lostText;
+    [SerializeField] TextMeshProUGUI _wordText;
+    bool _isGameOver = false;
 
     /// <summary>
     /// Builds the word database.
@@ -34,7 +41,7 @@ public class GameController : MonoBehaviour
     /// </summary>
     void BuildKeyboard()
     {
-        for(int i = 0; i < _keyboardButtons.Length; i++)
+        for (int i = 0; i < _keyboardButtons.Length; i++)
         {
             var index = i;
             var button = _keyboardButtons[index];
@@ -49,12 +56,15 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
-        if(_words.Length > 0)
+        if (_words.Length > 0)
         {
             BuildWordDatabase();
         }
         BuildKeyboard();
         _word = _words[Random.Range(0, _words.Length)];
+
+        _gameOverObject.SetActive(false);
+        _gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -71,6 +81,8 @@ public class GameController : MonoBehaviour
     /// </summary>
     public void SubmitWord()
     {
+        if (_isGameOver) return;
+
         var word = new string(_input.ToArray());
 
         if (word.Length < Word.WordLength) return;
@@ -114,7 +126,7 @@ public class GameController : MonoBehaviour
             if (letter.LetterValue == input[i])
             {
                 color = LetterColor.Green;
-                imageColor = Color.green; 
+                imageColor = Color.green;
 
                 _letterDictionary[letter.LetterValue] = (color, button);
                 button.GetComponent<Image>().color = imageColor;
@@ -185,11 +197,13 @@ public class GameController : MonoBehaviour
     /// </summary>
     void Win()
     {
+        _isGameOver = true;
         Debug.Log("Win");
         foreach (Letter letter in _rows[CurrentRow].Letters)
         {
             letter.SetColor(LetterColor.Green);
         }
+        StartCoroutine(EndSequence(true));
     }
 
     /// <summary>
@@ -197,7 +211,24 @@ public class GameController : MonoBehaviour
     /// </summary>
     void GameOver()
     {
+        _isGameOver = true;
         Debug.Log($"Lose. Word was: {_word.ToUpper()}");
+        StartCoroutine(EndSequence(false));
+    }
+
+    IEnumerator EndSequence(bool won)
+    {
+        yield return new WaitForSeconds(2);
+
+        _gameOverObject.SetActive(true);
+        _gameObject.SetActive(false);
+
+        _lostText.gameObject.SetActive(!won);
+        _wonText.gameObject.SetActive(won);
+
+        _wordText.gameObject.SetActive(true);
+        _wordText.text = $"The word was:\n{_word.ToUpper()}";
+
     }
 
     /// <summary>
@@ -206,6 +237,7 @@ public class GameController : MonoBehaviour
     /// <param name="character">the character to add.</param>
     public void AddCharacter(char character)
     {
+        if (_isGameOver) return;
         _input.Add(character);
         UpdateRow();
     }
@@ -215,6 +247,7 @@ public class GameController : MonoBehaviour
     /// </summary>
     public void RemoveCharacter()
     {
+        if (_isGameOver) return;
         if (_input.Count <= 0) return;
 
         _input.RemoveAt(_input.Count - 1);
