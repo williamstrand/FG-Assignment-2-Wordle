@@ -91,17 +91,16 @@ public class GameController : MonoBehaviour
     {
         if (_isGameOver) return;
 
-        var word = new string(_input.ToArray());
+        var guess = new string(_input.ToArray());
 
-        if (word.Length < Word.WordLength) return;
-
-        if (!ContainsWord(_words, word)) return;
+        if (guess.Length < Word.WordLength) return;
+        if (!ContainsWord(_words, guess)) return;
 
         _input.Clear();
 
         UpdateLetterColors(_rows[CurrentRow], _word);
 
-        if (word.ToLower() == _word.ToLower())
+        if (CheckIfWon(guess))
         {
             Win();
             return;
@@ -114,6 +113,8 @@ public class GameController : MonoBehaviour
             GameOver();
         }
     }
+
+    bool CheckIfWon(string guess) => string.Compare(guess, _word, true) == 0;
 
     /// <summary>
     /// Updates the color of the inputted letter and the keyboard letters.
@@ -250,6 +251,8 @@ public class GameController : MonoBehaviour
     public void AddCharacter(char character)
     {
         if (_isGameOver) return;
+        if (_input.Count >= Word.WordLength) return;
+
         _input.Add(character);
         UpdateRow();
     }
