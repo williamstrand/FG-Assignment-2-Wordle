@@ -22,29 +22,8 @@ public class Letter : MonoBehaviour
         _text.text = "";
     }
 
-    public void SetColor(LetterColor color)
+    public void SetColor(Color color)
     {
-        switch (color)
-        {
-            case LetterColor.Red:
-                _background.color = Color.red;
-                break;
-
-            case LetterColor.Green:
-                _background.color = Color.green;
-                break;
-
-            case LetterColor.Yellow:
-                _background.color = Color.yellow;
-                break;
-        }
+        _background.color = color;
     }
-}
-
-public enum LetterColor
-{
-    Red,
-    Green,
-    Yellow,
-    None
 }

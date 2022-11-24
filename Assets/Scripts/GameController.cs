@@ -8,6 +8,10 @@ public class GameController : MonoBehaviour
 {
     const string KeyboardLetters = "qwertyuiopasdfghjklzxcvbnm";
     const int RowCount = 5;
+    [SerializeField] Color CorrectColor;
+    [SerializeField] Color WrongPosColor;
+    [SerializeField] Color WrongColor;
+    [SerializeField] Color CurrentRowColor;
 
     public event Action<bool, string> OnGameEnd
     {
@@ -16,7 +20,7 @@ public class GameController : MonoBehaviour
     }
     event Action<bool, string> _onGameEnd;
 
-    Dictionary<char, (LetterColor, Button)> _letterDictionary = new Dictionary<char, (LetterColor, Button)>();
+    Dictionary<char, Button> _buttonDict = new Dictionary<char, Button>();
     [SerializeField] TextAsset _wordsText;
 
     [SerializeField] Word[] _rows;
@@ -37,7 +41,16 @@ public class GameController : MonoBehaviour
             BuildWordDatabase();
         }
         BuildKeyboard();
-        _word = _words[UnityEngine.Random.Range(0, _words.Length)];
+
+        if (_word.Length < Word.WordLength)
+        {
+            _word = _words[UnityEngine.Random.Range(0, _words.Length)];
+        }
+
+        foreach (var letter in _rows[CurrentRow].Letters)
+        {
+            letter.SetColor(CurrentRowColor);
+        }
     }
 
     /// <summary>
@@ -64,7 +77,7 @@ public class GameController : MonoBehaviour
             var button = _keyboardButtons[index];
             var letter = KeyboardLetters[index];
 
-            _letterDictionary.Add(letter, (LetterColor.None, button));
+            _buttonDict.Add(letter, button);
 
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => AddCharacter(letter));
@@ -93,8 +106,11 @@ public class GameController : MonoBehaviour
 
         var guess = new string(_input.ToArray());
 
-        if (guess.Length < Word.WordLength) return;
-        if (!ContainsWord(_words, guess)) return;
+        if (CheckIfValidWord(guess))
+        { 
+            StartCoroutine(InvalidWordAnimation());
+            return;
+        }
 
         _input.Clear();
 
@@ -106,60 +122,81 @@ public class GameController : MonoBehaviour
             return;
         }
 
+        NextRow();
+    }
+
+    bool CheckIfValidWord(string word) => !ContainsWord(_words, word) || word.Length < Word.WordLength;
+
+    IEnumerator InvalidWordAnimation()
+    {
+        var lerp = 0f;
+        while (lerp < 1)
+        {
+            foreach (var letter in _rows[CurrentRow].Letters)
+            {
+                letter.SetColor(Color.Lerp(WrongColor, CurrentRowColor, lerp));
+                lerp += Time.deltaTime;
+            }
+            yield return null;
+        }
+    }
+
+    void NextRow()
+    {
         CurrentRow++;
 
         if (CurrentRow >= RowCount)
         {
             GameOver();
+            return;
+        }
+
+        foreach (var letter in _rows[CurrentRow].Letters)
+        {
+            letter.SetColor(CurrentRowColor);
         }
     }
 
+    /// <summary>
+    /// Checks if player has won.
+    /// </summary>
+    /// <param name="guess">the player's guess.</param>
+    /// <returns>true if the player has won.</returns>
     bool CheckIfWon(string guess) => string.Compare(guess, _word, true) == 0;
 
     /// <summary>
     /// Updates the color of the inputted letter and the keyboard letters.
     /// </summary>
     /// <param name="row">the current row.</param>
-    /// <param name="input">the input string.</param>
-    void UpdateLetterColors(Word row, string input)
+    /// <param name="word">the word string.</param>
+    void UpdateLetterColors(Word row, string word)
     {
-        for (int i = 0; i < input.Length; i++)
+        for (int i = 0; i < word.Length; i++)
         {
             var letter = row.Letters[i];
-            var button = _letterDictionary[letter.LetterValue].Item2;
+            var button = _buttonDict[letter.LetterValue];
 
-            LetterColor color;
             Color imageColor;
 
-            if (letter.LetterValue == input[i])
+            if (letter.LetterValue == word[i])
             {
-                color = LetterColor.Green;
-                imageColor = Color.green;
+                imageColor = CorrectColor;
 
-                _letterDictionary[letter.LetterValue] = (color, button);
                 button.GetComponent<Image>().color = imageColor;
-                letter.SetColor(color);
-            }
-            else if (_letterDictionary[letter.LetterValue] == (LetterColor.None, button))
-            {
-                if (ContainsLetter(input, letter.LetterValue))
-                {
-                    color = LetterColor.Yellow;
-                    imageColor = Color.yellow;
-                }
-                else
-                {
-                    color = LetterColor.Red;
-                    imageColor = Color.red;
-                }
-
-                _letterDictionary[letter.LetterValue] = (color, button);
-                button.GetComponent<Image>().color = imageColor;
-                letter.SetColor(color);
+                letter.SetColor(CorrectColor);
             }
             else
             {
-                letter.SetColor(_letterDictionary[letter.LetterValue].Item1);
+                if (ContainsLetter(word, letter.LetterValue))
+                {
+                    imageColor = WrongPosColor;
+                }
+                else
+                {
+                    imageColor = WrongColor;
+                }
+                button.GetComponent<Image>().color = imageColor;
+                letter.SetColor(imageColor);
             }
         }
     }
@@ -215,7 +252,7 @@ public class GameController : MonoBehaviour
     {
         foreach (Letter letter in _rows[CurrentRow].Letters)
         {
-            letter.SetColor(LetterColor.Green);
+            letter.SetColor(CorrectColor);
         }
         StartCoroutine(EndSequence(true));
     }
@@ -223,7 +260,7 @@ public class GameController : MonoBehaviour
     /// <summary>
     /// Triggers a game over.
     /// </summary>
-    void GameOver()
+    public void GameOver()
     {
         StartCoroutine(EndSequence(false));
     }
