@@ -25,7 +25,8 @@ public class GameController : MonoBehaviour
 
     [SerializeField] Word[] _rows;
     [SerializeField] Button[] _keyboardButtons;
-    [SerializeField] string[] _words;
+    string[] _words;
+    HashSet<string> _wordsList;
     [SerializeField] string _word;
 
     int CurrentRow = 0;
@@ -63,6 +64,13 @@ public class GameController : MonoBehaviour
         for (int i = 0; i < _words.Length; i++)
         {
             _words[i] = _words[i].Trim();
+        }
+
+        _wordsList = new HashSet<string>();
+
+        foreach (var word in _words)
+        {
+            _wordsList.Add(word);
         }
     }
 
@@ -125,7 +133,7 @@ public class GameController : MonoBehaviour
         NextRow();
     }
 
-    bool CheckIfValidWord(string word) => !ContainsWord(_words, word) || word.Length < Word.WordLength;
+    bool CheckIfValidWord(string word) => !_wordsList.Contains(word) || word.Length < Word.WordLength;
 
     IEnumerator InvalidWordAnimation()
     {
