@@ -37,7 +37,7 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
-        if (_words.Length > 0)
+        if (_words.Length <= 0)
         {
             BuildWordDatabase();
         }
